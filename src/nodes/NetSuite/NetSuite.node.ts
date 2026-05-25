@@ -22,7 +22,7 @@ import {
 	nodeDescription,
 } from './NetSuite.node.options';
 
-import { makeRequest } from '@drowl87/netsuite-rest-api-client';
+import { NetSuiteClient } from '../../NetSuiteClient';
 
 import pLimit from 'p-limit';
 
@@ -94,6 +94,28 @@ const getConfig = (credentials: INetSuiteCredentials) => ({
 	netsuiteQueryLimit: 1000,
 });
 
+const makeRequest = async (credentials: INetSuiteCredentials, requestOptions: INetSuiteRequestOptions): Promise<INetSuiteResponse> => {
+	const client = new NetSuiteClient({
+		hostname: credentials.hostname,
+		accountId: credentials.accountId,
+		consumerKey: credentials.consumerKey,
+		consumerSecret: credentials.consumerSecret,
+		tokenKey: credentials.tokenKey,
+		tokenSecret: credentials.tokenSecret,
+	});
+
+	const path = requestOptions.nextUrl || requestOptions.path || '';
+	const response = await client.request(path, requestOptions.method, requestOptions.body, requestOptions.query, requestOptions.headers);
+
+	return {
+		statusCode: response.statusCode,
+		statusText: response.statusText,
+		body: response.body,
+		headers: response.headers,
+		request: response.request,
+	};
+};
+
 export class NetSuite implements INodeType {
 	description: INodeTypeDescription = nodeDescription;
 
@@ -138,7 +160,7 @@ export class NetSuite implements INodeType {
 		nodeContext.count = limit;
 		nodeContext.offset = offset;
 		while ((returnAll || returnData.length < limit) && hasMore === true) {
-			const response = await makeRequest(getConfig(credentials), requestData);
+			const response = await makeRequest(credentials, requestData);
 			const body: JsonObject = handleNetsuiteResponse(fns, response);
 			const { hasMore: doContinue, items, links, offset, count, totalResults } = (body.json as INetSuitePagedBody);
 			if (doContinue) {
@@ -178,7 +200,7 @@ export class NetSuite implements INodeType {
 		const requestType = NetSuiteRequestType.SuiteQL;
 		const params = new URLSearchParams();
 		const returnData: INodeExecutionData[] = [];
-		const config = getConfig(credentials);
+		const config = { ...credentials, netsuiteQueryLimit: limit };
 		let prefix = '?';
 		if (returnAll !== true) {
 			limit = fns.getNodeParameter('limit', itemIndex) as number || limit;
@@ -250,8 +272,8 @@ export class NetSuite implements INodeType {
 			requestType: NetSuiteRequestType.Record,
 			path: `services/rest/record/${apiVersion}/${recordType}/${internalId}${q ? `?${q}` : ''}`,
 		};
-		const response = await makeRequest(getConfig(credentials), requestData);
-		if (item) response.body.orderNo = item.json.orderNo;
+		const response = await makeRequest(credentials, requestData);
+		if (item) (response.body as any).orderNo = item.json.orderNo;
 		return handleNetsuiteResponse(fns, response);
 	}
 
@@ -265,7 +287,7 @@ export class NetSuite implements INodeType {
 			requestType: NetSuiteRequestType.Record,
 			path: `services/rest/record/${apiVersion}/${recordType}/${internalId}`,
 		};
-		const response = await makeRequest(getConfig(credentials), requestData);
+		const response = await makeRequest(credentials, requestData);
 		return handleNetsuiteResponse(fns, response);
 	}
 
@@ -282,7 +304,7 @@ export class NetSuite implements INodeType {
 		if (query) {
 			requestData.query = query as Record<string, string | number | boolean>;
 		}
-		const response = await makeRequest(getConfig(credentials), requestData);
+		const response = await makeRequest(credentials, requestData);
 		return handleNetsuiteResponse(fns, response);
 	}
 
@@ -300,7 +322,7 @@ export class NetSuite implements INodeType {
 		if (query) {
 			requestData.query = query as Record<string, string | number | boolean>;
 		}
-		const response = await makeRequest(getConfig(credentials), requestData);
+		const response = await makeRequest(credentials, requestData);
 		return handleNetsuiteResponse(fns, response);
 	}
 
@@ -341,13 +363,13 @@ export class NetSuite implements INodeType {
 		if ((requestData.query as Record<string, unknown>)?.query) {
 			requestData.query = ((requestData.query as Record<string, unknown>).query) as Record<string, string | number | boolean>;
 		}
-		const response = await makeRequest(getConfig(credentials), requestData);
+		const response = await makeRequest(credentials, requestData);
 
 		if (response.body) {
-			nodeContext.hasMore = response.body.hasMore;
-			nodeContext.count = response.body.count;
-			nodeContext.offset = response.body.offset;
-			nodeContext.totalResults = response.body.totalResults;
+			nodeContext.hasMore = (response.body as any).hasMore;
+			nodeContext.count = (response.body as any).count;
+			nodeContext.offset = (response.body as any).offset;
+			nodeContext.totalResults = (response.body as any).totalResults;
 		}
 
 		if (nodeOptions.fullResponse) {

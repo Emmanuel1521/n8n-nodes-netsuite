@@ -20,33 +20,68 @@ class NetSuiteClient {
         if (!this.hostname || !this.accountId || !this.consumerKey || !this.consumerSecret || !this.tokenKey || !this.tokenSecret) {
             throw new Error('Missing required NetSuite credential data.');
         }
-        this.apiBaseUrl = `https://${this.hostname}/services/rest/record/v1`;
+        this.apiBaseUrl = `https://${this.hostname}`;
     }
-    async request(path, method = 'GET', body, query) {
-        const url = new URL(`${this.apiBaseUrl}/${path}`);
-        if (query) {
+    async request(path, method = 'GET', body, query, headers) {
+        const normalizedPath = path.replace(/^\/+/, '');
+        const url = new URL(`${this.apiBaseUrl}/${normalizedPath}`);
+        if (typeof query === 'object' && query !== null) {
             Object.entries(query).forEach(([key, value]) => {
                 if (value !== undefined && value !== null) {
                     url.searchParams.set(key, String(value));
                 }
             });
         }
+        else if (typeof query === 'string' && query.length > 0) {
+            const extra = query.startsWith('?') ? query.substring(1) : query;
+            extra.split('&').forEach((param) => {
+                const [key, value] = param.split('=');
+                if (key) {
+                    url.searchParams.set(key, value || '');
+                }
+            });
+        }
         const authorization = this.buildAuthorizationHeader(method, url, query);
-        const headers = {
+        const requestHeaders = {
             Authorization: authorization,
             'Content-Type': 'application/json',
             Accept: 'application/json',
+            ...(headers || {}),
         };
+        const requestBody = typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined;
         const response = await fetch(url.toString(), {
             method,
-            headers,
-            body: body ? JSON.stringify(body) : undefined,
+            headers: requestHeaders,
+            body: requestBody,
         });
         const responseText = await response.text();
-        if (!response.ok) {
-            throw new Error(`NetSuite API request failed: ${response.status} ${response.statusText} - ${responseText}`);
+        let parsedBody = {};
+        if (responseText) {
+            try {
+                parsedBody = JSON.parse(responseText);
+            }
+            catch {
+                parsedBody = responseText;
+            }
         }
-        return responseText ? JSON.parse(responseText) : {};
+        const responseHeaders = {};
+        response.headers.forEach((value, key) => {
+            responseHeaders[key.toLowerCase()] = value;
+        });
+        return {
+            statusCode: response.status,
+            statusText: response.statusText,
+            body: parsedBody,
+            headers: responseHeaders,
+            request: {
+                url: url.toString(),
+                options: {
+                    method,
+                    headers: requestHeaders,
+                    body: requestBody,
+                },
+            },
+        };
     }
     buildAuthorizationHeader(method, url, query) {
         const oauth = {
@@ -74,9 +109,17 @@ class NetSuiteClient {
             parameters[key] = value;
         });
         if (query) {
-            Object.entries(query).forEach(([key, value]) => {
-                parameters[key] = String(value);
-            });
+            if (typeof query === 'string') {
+                const search = new URLSearchParams(query.startsWith('?') ? query.substring(1) : query);
+                for (const [key, value] of search) {
+                    parameters[key] = value;
+                }
+            }
+            else {
+                Object.entries(query).forEach(([key, value]) => {
+                    parameters[key] = String(value);
+                });
+            }
         }
         const baseUrl = `${url.origin}${url.pathname}`;
         const parameterString = this.buildParameterString(parameters);

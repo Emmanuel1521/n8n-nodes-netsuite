@@ -8,7 +8,7 @@ const util_1 = require("util");
 const n8n_workflow_1 = require("n8n-workflow");
 const NetSuite_node_types_1 = require("./NetSuite.node.types");
 const NetSuite_node_options_1 = require("./NetSuite.node.options");
-const netsuite_rest_api_client_1 = require("@drowl87/netsuite-rest-api-client");
+const NetSuiteClient_1 = require("../../NetSuiteClient");
 const p_limit_1 = __importDefault(require("p-limit"));
 const debug = (0, util_1.debuglog)('n8n-nodes-netsuite');
 const handleNetsuiteResponse = (fns, response) => {
@@ -72,6 +72,25 @@ const getConfig = (credentials) => ({
     netsuiteTokenSecret: credentials.tokenSecret,
     netsuiteQueryLimit: 1000,
 });
+const makeRequest = async (credentials, requestOptions) => {
+    const client = new NetSuiteClient_1.NetSuiteClient({
+        hostname: credentials.hostname,
+        accountId: credentials.accountId,
+        consumerKey: credentials.consumerKey,
+        consumerSecret: credentials.consumerSecret,
+        tokenKey: credentials.tokenKey,
+        tokenSecret: credentials.tokenSecret,
+    });
+    const path = requestOptions.nextUrl || requestOptions.path || '';
+    const response = await client.request(path, requestOptions.method, requestOptions.body, requestOptions.query, requestOptions.headers);
+    return {
+        statusCode: response.statusCode,
+        statusText: response.statusText,
+        body: response.body,
+        headers: response.headers,
+        request: response.request,
+    };
+};
 class NetSuite {
     description = NetSuite_node_options_1.nodeDescription;
     static getRecordType({ fns, itemIndex }) {
@@ -114,7 +133,7 @@ class NetSuite {
         nodeContext.count = limit;
         nodeContext.offset = offset;
         while ((returnAll || returnData.length < limit) && hasMore === true) {
-            const response = await (0, netsuite_rest_api_client_1.makeRequest)(getConfig(credentials), requestData);
+            const response = await makeRequest(credentials, requestData);
             const body = handleNetsuiteResponse(fns, response);
             const { hasMore: doContinue, items, links, offset, count, totalResults } = body.json;
             if (doContinue) {
@@ -153,7 +172,7 @@ class NetSuite {
         const requestType = NetSuite_node_types_1.NetSuiteRequestType.SuiteQL;
         const params = new URLSearchParams();
         const returnData = [];
-        const config = getConfig(credentials);
+        const config = { ...credentials, netsuiteQueryLimit: limit };
         let prefix = '?';
         if (returnAll !== true) {
             limit = fns.getNodeParameter('limit', itemIndex) || limit;
@@ -178,7 +197,7 @@ class NetSuite {
         nodeContext.offset = offset;
         debug('requestData', requestData);
         while ((returnAll || returnData.length < limit) && hasMore === true) {
-            const response = await (0, netsuite_rest_api_client_1.makeRequest)(config, requestData);
+            const response = await makeRequest(config, requestData);
             const body = handleNetsuiteResponse(fns, response);
             const { hasMore: doContinue, items, links, count, totalResults, offset } = body.json;
             if (doContinue) {
@@ -223,7 +242,7 @@ class NetSuite {
             requestType: NetSuite_node_types_1.NetSuiteRequestType.Record,
             path: `services/rest/record/${apiVersion}/${recordType}/${internalId}${q ? `?${q}` : ''}`,
         };
-        const response = await (0, netsuite_rest_api_client_1.makeRequest)(getConfig(credentials), requestData);
+        const response = await makeRequest(credentials, requestData);
         if (item)
             response.body.orderNo = item.json.orderNo;
         return handleNetsuiteResponse(fns, response);
@@ -238,7 +257,7 @@ class NetSuite {
             requestType: NetSuite_node_types_1.NetSuiteRequestType.Record,
             path: `services/rest/record/${apiVersion}/${recordType}/${internalId}`,
         };
-        const response = await (0, netsuite_rest_api_client_1.makeRequest)(getConfig(credentials), requestData);
+        const response = await makeRequest(credentials, requestData);
         return handleNetsuiteResponse(fns, response);
     }
     static async insertRecord(options) {
@@ -254,7 +273,7 @@ class NetSuite {
         if (query) {
             requestData.query = query;
         }
-        const response = await (0, netsuite_rest_api_client_1.makeRequest)(getConfig(credentials), requestData);
+        const response = await makeRequest(credentials, requestData);
         return handleNetsuiteResponse(fns, response);
     }
     static async updateRecord(options) {
@@ -271,7 +290,7 @@ class NetSuite {
         if (query) {
             requestData.query = query;
         }
-        const response = await (0, netsuite_rest_api_client_1.makeRequest)(getConfig(credentials), requestData);
+        const response = await makeRequest(credentials, requestData);
         return handleNetsuiteResponse(fns, response);
     }
     static async rawRequest(options) {
@@ -309,7 +328,7 @@ class NetSuite {
         if (requestData.query?.query) {
             requestData.query = (requestData.query.query);
         }
-        const response = await (0, netsuite_rest_api_client_1.makeRequest)(getConfig(credentials), requestData);
+        const response = await makeRequest(credentials, requestData);
         if (response.body) {
             nodeContext.hasMore = response.body.hasMore;
             nodeContext.count = response.body.count;

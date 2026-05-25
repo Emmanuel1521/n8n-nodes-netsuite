@@ -22,43 +22,76 @@ export class NetSuiteClient {
       throw new Error('Missing required NetSuite credential data.');
     }
 
-    this.apiBaseUrl = `https://${this.hostname}/services/rest/record/v1`;
+    this.apiBaseUrl = `https://${this.hostname}`;
   }
 
-  async request(path: string, method = 'GET', body?: IDataObject, query?: IDataObject): Promise<any> {
-    const url = new URL(`${this.apiBaseUrl}/${path}`);
+  async request(path: string, method = 'GET', body?: IDataObject | string, query?: IDataObject | string, headers?: Record<string, string>): Promise<any> {
+    const normalizedPath = path.replace(/^\/+/, '');
+    const url = new URL(`${this.apiBaseUrl}/${normalizedPath}`);
 
-    if (query) {
+    if (typeof query === 'object' && query !== null) {
       Object.entries(query).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           url.searchParams.set(key, String(value));
         }
       });
+    } else if (typeof query === 'string' && query.length > 0) {
+      const extra = query.startsWith('?') ? query.substring(1) : query;
+      extra.split('&').forEach((param) => {
+        const [key, value] = param.split('=');
+        if (key) {
+          url.searchParams.set(key, value || '');
+        }
+      });
     }
 
     const authorization = this.buildAuthorizationHeader(method, url, query);
-    const headers: Record<string, string> = {
+    const requestHeaders: Record<string, string> = {
       Authorization: authorization,
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...(headers || {}),
     };
 
+    const requestBody = typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined;
     const response = await fetch(url.toString(), {
       method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: requestHeaders,
+      body: requestBody,
     });
 
     const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`NetSuite API request failed: ${response.status} ${response.statusText} - ${responseText}`);
+    let parsedBody: any = {};
+    if (responseText) {
+      try {
+        parsedBody = JSON.parse(responseText);
+      } catch {
+        parsedBody = responseText;
+      }
     }
 
-    return responseText ? JSON.parse(responseText) : {};
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key.toLowerCase()] = value;
+    });
+
+    return {
+      statusCode: response.status,
+      statusText: response.statusText,
+      body: parsedBody,
+      headers: responseHeaders,
+      request: {
+        url: url.toString(),
+        options: {
+          method,
+          headers: requestHeaders,
+          body: requestBody,
+        },
+      },
+    };
   }
 
-  private buildAuthorizationHeader(method: string, url: URL, query?: IDataObject): string {
+  private buildAuthorizationHeader(method: string, url: URL, query?: IDataObject | string): string {
     const oauth = {
       oauth_consumer_key: this.consumerKey,
       oauth_nonce: this.createNonce(),
@@ -84,7 +117,7 @@ export class NetSuiteClient {
     );
   }
 
-  private getSignature(method: string, url: URL, oauth: Record<string, string>, query?: IDataObject): string {
+  private getSignature(method: string, url: URL, oauth: Record<string, string>, query?: IDataObject | string): string {
     const parameters: Record<string, string> = {};
 
     Object.entries(oauth).forEach(([key, value]) => {
@@ -92,9 +125,16 @@ export class NetSuiteClient {
     });
 
     if (query) {
-      Object.entries(query).forEach(([key, value]) => {
-        parameters[key] = String(value);
-      });
+      if (typeof query === 'string') {
+        const search = new URLSearchParams(query.startsWith('?') ? query.substring(1) : query);
+        for (const [key, value] of search) {
+          parameters[key] = value;
+        }
+      } else {
+        Object.entries(query).forEach(([key, value]) => {
+          parameters[key] = String(value);
+        });
+      }
     }
 
     const baseUrl = `${url.origin}${url.pathname}`;

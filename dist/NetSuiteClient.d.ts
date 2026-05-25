@@ -8,7 +8,7 @@ export declare class NetSuiteClient {
     private tokenSecret;
     private apiBaseUrl;
     constructor(credentials: IDataObject);
-    request(path: string, method?: string, body?: IDataObject, query?: IDataObject): Promise<any>;
+    request(path: string, method?: string, body?: IDataObject | string, query?: IDataObject | string, headers?: Record<string, string>): Promise<any>;
     private buildAuthorizationHeader;
     private getSignature;
     private buildParameterString;
