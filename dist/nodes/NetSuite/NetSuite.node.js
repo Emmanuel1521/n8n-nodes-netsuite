@@ -9,7 +9,7 @@ const n8n_workflow_1 = require("n8n-workflow");
 const NetSuite_node_types_1 = require("./NetSuite.node.types");
 const NetSuite_node_options_1 = require("./NetSuite.node.options");
 const NetSuiteClient_1 = require("../../NetSuiteClient");
-const p_limit_1 = __importDefault(require("p-limit"));
+const pLimit_1 = __importDefault(require("../../utils/pLimit"));
 const debug = (0, util_1.debuglog)('n8n-nodes-netsuite');
 const handleNetsuiteResponse = (fns, response) => {
     debug(`Netsuite response:`, response.statusCode, response.body);
@@ -356,7 +356,7 @@ class NetSuite {
         const promises = [];
         const options = this.getNodeParameter('options', 0);
         const concurrency = options.concurrency || 1;
-        const limit = (0, p_limit_1.default)(concurrency);
+        const limit = (0, pLimit_1.default)(concurrency);
         for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
             const item = items[itemIndex];
             let data;

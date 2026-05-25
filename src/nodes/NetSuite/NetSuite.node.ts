@@ -24,7 +24,7 @@ import {
 
 import { NetSuiteClient } from '../../NetSuiteClient';
 
-import pLimit from 'p-limit';
+import pLimit from '../../utils/pLimit';
 
 const debug = debuglog('n8n-nodes-netsuite');
 
