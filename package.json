@@ -1,7 +1,7 @@
 {
-  "name": "@drowl87/n8n-nodes-netsuite",
+  "name": "@emmanuel1521/n8n-nodes-netsuite",
   "version": "0.7.27",
-  "description": "n8n node for NetSuite using the REST API. This version has a few security patches, extends additional transaction types, and fixes some syntax issues.",
+  "description": "n8n node for NetSuite REST API integration.",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -43,11 +43,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/drowl87/n8n-nodes-netsuite.git"
+    "url": "git+https://github.com/Emmanuel1521/n8n-nodes-netsuite.git"
   },
-  "homepage": "https://github.com/drowl87/n8n-nodes-netsuite",
+  "homepage": "https://github.com/Emmanuel1521/n8n-nodes-netsuite",
   "bugs": {
-    "url": "https://github.com/drowl87/n8n-nodes-netsuite/issues"
+    "url": "https://github.com/Emmanuel1521/n8n-nodes-netsuite/issues"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

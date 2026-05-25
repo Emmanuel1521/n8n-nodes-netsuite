@@ -15,6 +15,12 @@ Getting started
 npm install /path/to/this/repo
 ```
 
+Or after publishing:
+
+```bash
+npm install @emmanuel1521/n8n-nodes-netsuite
+```
+
 2. Add credentials in n8n (NetSuite):
 - Hostname
 - Account ID
