@@ -48,12 +48,14 @@ This node uses **NetSuite Token-Based Authentication (TBA)** with OAuth 1.0a HMA
 
 ### Values to enter in n8n
 
-| Field | Where to find it |
-|---|---|
-| **Hostname** | `<accountId>.suitetalk.api.netsuite.com` (sandboxes use `<accountId>-sb1`). Find your account ID at *Setup → Company → Company Information*. |
-| **Account ID** | Same screen as above. Sandbox accounts include the `_SB1` suffix. |
-| **Consumer Key / Secret** | From the Integration record (step 2). |
-| **Token Key / Secret** | From the Access Token (step 5). |
+| # | Field | Where to find it |
+|---|---|---|
+| 1 | **Hostname** | `<accountId>.suitetalk.api.netsuite.com` (sandboxes use `<accountId>-sb1`). Find your account ID at *Setup → Company → Company Information*. |
+| 2 | **Account ID** | Same screen as above. Sandbox accounts include the `_SB1` suffix. |
+| 3 | **Consumer Key** | From the Integration record (step 2 above). |
+| 4 | **Consumer Secret** | From the Integration record (step 2 above). |
+| 5 | **Token Key** | From the Access Token (step 5 above). |
+| 6 | **Token Secret** | From the Access Token (step 5 above). |
 
 Full NetSuite TBA reference: [Token-Based Authentication (TBA) docs](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4247337262.html).
 
