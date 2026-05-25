@@ -1,0 +1,65 @@
+{
+  "name": "@drowl87/n8n-nodes-netsuite",
+  "version": "0.7.27",
+  "description": "n8n node for NetSuite using the REST API. This version has a few security patches, extends additional transaction types, and fixes some syntax issues.",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --build --watch",
+    "lint": "eslint --ext .ts src",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "dependencies": {
+    "@drowl87/netsuite-rest-api-client": "^1.0.2",
+    "p-limit": "^3.1.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "@types/node": "^20.0.0",
+    "eslint": "^9.26.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "n8n",
+    "node",
+    "netsuite",
+    "rest",
+    "api",
+    "suitetalk",
+    "n8n-node",
+    "n8n-community-node-package"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drowl87/n8n-nodes-netsuite.git"
+  },
+  "homepage": "https://github.com/drowl87/n8n-nodes-netsuite",
+  "bugs": {
+    "url": "https://github.com/drowl87/n8n-nodes-netsuite/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/NetSuite.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/NetSuite/NetSuite.node.js"
+    ]
+  }
+}
