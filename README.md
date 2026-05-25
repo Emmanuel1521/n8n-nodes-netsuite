@@ -1,50 +1,45 @@
-# @custom/n8n-netsuite
+# n8n NetSuite Integration (community node)
 
-An n8n community node package for NetSuite REST API integration.
+This repository provides an n8n community node that integrates with the NetSuite REST API.
 
-## What it does
+Features
+- Get, list, create, update and delete NetSuite records
+- Execute SuiteQL queries
+- Raw HTTP requests to NetSuite REST endpoints
 
-- Adds a `NetSuite` node to n8n
-- Supports credential-based token authentication for NetSuite REST
-- Includes record operations for `get`, `search`, `create`, `update`, and `delete`
-
-## Installation
-
-Install the package in your n8n root directory:
+Getting started
+1. Install into your n8n instance (local or server):
 
 ```bash
-npm install @custom/n8n-netsuite
+# inside your n8n project or user nodes folder
+npm install /path/to/this/repo
 ```
 
-If using n8n Docker, install it in the container's n8n directory before startup.
-
-## Configuration
-
-Create new NetSuite credentials inside n8n with:
-
+2. Add credentials in n8n (NetSuite):
 - Hostname
 - Account ID
-- Consumer Key
-- Consumer Secret
-- Token Key
-- Token Secret
+- Consumer Key / Consumer Secret
+- Token Key / Token Secret
 
-Then add a NetSuite node to a workflow and configure the operation and record type.
-
-## Development
+Development
 
 ```bash
-npm install
+# install dependencies
+npm ci
+
+# build
 npm run build
+
+# watch
+npm run dev
 ```
 
-## Build output
+Testing locally in n8n
+- Build the package and copy the `dist/` output into your n8n community nodes directory or install as a local package. Restart n8n.
 
-The package is compiled to `dist/` and exports:
+Contributing
+- Open an issue or submit a PR. Include steps to reproduce and any relevant logs.
 
-- `dist/nodes/NetSuite/NetSuite.node.js`
-- `dist/credentials/NetSuite.credentials.js`
+License
 
-## Notes
-
-This is a starter implementation. You can extend it with additional NetSuite resources, finer-grained options, and advanced REST authentication support.
+MIT
