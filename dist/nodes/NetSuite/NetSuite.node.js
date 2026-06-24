@@ -11,7 +11,7 @@ const NetSuite_node_options_1 = require("./NetSuite.node.options");
 const NetSuiteClient_1 = require("../../NetSuiteClient");
 const pLimit_1 = __importDefault(require("../../utils/pLimit"));
 const debug = (0, util_1.debuglog)('n8n-nodes-netsuite');
-const handleNetsuiteResponse = (fns, response) => {
+const handleNetsuiteResponse = (fns, response, itemIndex) => {
     debug(`Netsuite response:`, response.statusCode, response.body);
     let body = {};
     const bodyObj = (typeof response.body === 'string' ? { message: response.body } : response.body);
@@ -21,16 +21,12 @@ const handleNetsuiteResponse = (fns, response) => {
         if (webDetails && webDetails.length > 0) {
             message = webDetails[0].detail || message;
         }
-        if (fns.continueOnFail() !== true) {
-            const error = new n8n_workflow_1.NodeApiError(fns.getNode(), bodyObj);
-            error.message = message;
-            throw error;
+        const error = new n8n_workflow_1.NodeApiError(fns.getNode(), bodyObj);
+        error.message = message;
+        if (fns.continueOnFail(error)) {
+            return { json: { error: message }, pairedItem: { item: itemIndex } };
         }
-        else {
-            body = {
-                error: message,
-            };
-        }
+        throw error;
     }
     else {
         body = bodyObj;
@@ -135,7 +131,7 @@ class NetSuite {
         nodeContext.offset = offset;
         while ((returnAll || returnData.length < limit) && hasMore === true) {
             const response = await makeRequest(credentials, requestData);
-            const result = handleNetsuiteResponse(fns, response);
+            const result = handleNetsuiteResponse(fns, response, itemIndex);
             const { hasMore: doContinue, items, links, offset, count, totalResults } = result.json;
             if (doContinue) {
                 nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
@@ -199,7 +195,7 @@ class NetSuite {
         debug('requestData', requestData);
         while ((returnAll || returnData.length < limit) && hasMore === true) {
             const response = await makeRequest(config, requestData);
-            const result = handleNetsuiteResponse(fns, response);
+            const result = handleNetsuiteResponse(fns, response, itemIndex);
             const { hasMore: doContinue, items, links, count, totalResults, offset } = result.json;
             if (doContinue) {
                 nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
@@ -244,7 +240,7 @@ class NetSuite {
             path: `services/rest/record/${apiVersion}/${recordType}/${internalId}${q ? `?${q}` : ''}`,
         };
         const response = await makeRequest(credentials, requestData);
-        return handleNetsuiteResponse(fns, response);
+        return handleNetsuiteResponse(fns, response, itemIndex);
     }
     static async removeRecord(options) {
         const { fns, credentials, itemIndex } = options;
@@ -257,7 +253,7 @@ class NetSuite {
             path: `services/rest/record/${apiVersion}/${recordType}/${internalId}`,
         };
         const response = await makeRequest(credentials, requestData);
-        return handleNetsuiteResponse(fns, response);
+        return handleNetsuiteResponse(fns, response, itemIndex);
     }
     static async insertRecord(options) {
         const { fns, credentials, itemIndex, item } = options;
@@ -273,7 +269,7 @@ class NetSuite {
             requestData.query = query;
         }
         const response = await makeRequest(credentials, requestData);
-        return handleNetsuiteResponse(fns, response);
+        return handleNetsuiteResponse(fns, response, itemIndex);
     }
     static async updateRecord(options) {
         const { fns, credentials, itemIndex, item } = options;
@@ -290,7 +286,7 @@ class NetSuite {
             requestData.query = query;
         }
         const response = await makeRequest(credentials, requestData);
-        return handleNetsuiteResponse(fns, response);
+        return handleNetsuiteResponse(fns, response, itemIndex);
     }
     static async rawRequest(options) {
         const { fns, credentials, itemIndex, item } = options;
@@ -385,12 +381,12 @@ class NetSuite {
                     data = await NetSuite.runSuiteQL({ item, fns: this, credentials, itemIndex });
                 }
                 else {
-                    const error = `The operation "${operation}" is not supported!`;
-                    if (this.continueOnFail() !== true) {
-                        throw new Error(error);
+                    const error = new Error(`The operation "${operation}" is not supported!`);
+                    if (this.continueOnFail(error)) {
+                        data = { json: { error: error.message }, pairedItem: { item: itemIndex } };
                     }
                     else {
-                        data = { json: { error } };
+                        throw error;
                     }
                 }
                 return data;

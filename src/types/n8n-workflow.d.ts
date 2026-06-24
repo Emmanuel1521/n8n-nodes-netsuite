@@ -70,7 +70,7 @@ declare module 'n8n-workflow' {
     getCredentials(name: string): Promise<IDataObject | undefined>;
     getNode(): any;
     getContext(scope: string): IDataObject;
-    continueOnFail(): boolean;
+    continueOnFail(error?: Error): boolean;
     helpers: {
       returnJsonArray(data: IDataObject[]): INodeExecutionData[];
     };

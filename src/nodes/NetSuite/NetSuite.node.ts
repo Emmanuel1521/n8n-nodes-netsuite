@@ -29,7 +29,7 @@ import pLimit from '../../utils/pLimit';
 
 const debug = debuglog('n8n-nodes-netsuite');
 
-const handleNetsuiteResponse = (fns: IExecuteFunctions, response: INetSuiteResponse): INodeExecutionData => {
+const handleNetsuiteResponse = (fns: IExecuteFunctions, response: INetSuiteResponse, itemIndex: number): INodeExecutionData => {
 	debug(`Netsuite response:`, response.statusCode, response.body);
 	let body: JsonObject = {};
 	const bodyObj = (typeof response.body === 'string' ? { message: response.body } : response.body) as INetSuiteResponseBody;
@@ -44,15 +44,12 @@ const handleNetsuiteResponse = (fns: IExecuteFunctions, response: INetSuiteRespo
 		if (webDetails && webDetails.length > 0) {
 			message = webDetails[0].detail || message;
 		}
-		if (fns.continueOnFail() !== true) {
-			const error = new NodeApiError(fns.getNode(), bodyObj);
-			error.message = message;
-			throw error;
-		} else {
-			body = {
-				error: message,
-			};
+		const error = new NodeApiError(fns.getNode(), bodyObj);
+		error.message = message;
+		if (fns.continueOnFail(error)) {
+			return { json: { error: message }, pairedItem: { item: itemIndex } };
 		}
+		throw error;
 	} else {
 		body = bodyObj;
 		const requestOptions = response.request.options as { method?: string } | null;
@@ -163,7 +160,7 @@ export class NetSuite implements INodeType {
 		nodeContext.offset = offset;
 		while ((returnAll || returnData.length < limit) && hasMore === true) {
 			const response = await makeRequest(credentials, requestData);
-			const result = handleNetsuiteResponse(fns, response);
+			const result = handleNetsuiteResponse(fns, response, itemIndex);
 			const { hasMore: doContinue, items, links, offset, count, totalResults } = result.json as INetSuitePagedBody;
 			if (doContinue) {
 				nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
@@ -229,7 +226,7 @@ export class NetSuite implements INodeType {
 		debug('requestData', requestData);
 		while ((returnAll || returnData.length < limit) && hasMore === true) {
 			const response = await makeRequest(config, requestData);
-			const result = handleNetsuiteResponse(fns, response);
+			const result = handleNetsuiteResponse(fns, response, itemIndex);
 			const { hasMore: doContinue, items, links, count, totalResults, offset } = result.json as INetSuitePagedBody;
 			if (doContinue) {
 				nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
@@ -275,7 +272,7 @@ export class NetSuite implements INodeType {
 			path: `services/rest/record/${apiVersion}/${recordType}/${internalId}${q ? `?${q}` : ''}`,
 		};
 		const response = await makeRequest(credentials, requestData);
-		return handleNetsuiteResponse(fns, response);
+		return handleNetsuiteResponse(fns, response, itemIndex);
 	}
 
 	static async removeRecord(options: INetSuiteOperationOptions): Promise<INodeExecutionData> {
@@ -289,7 +286,7 @@ export class NetSuite implements INodeType {
 			path: `services/rest/record/${apiVersion}/${recordType}/${internalId}`,
 		};
 		const response = await makeRequest(credentials, requestData);
-		return handleNetsuiteResponse(fns, response);
+		return handleNetsuiteResponse(fns, response, itemIndex);
 	}
 
 	static async insertRecord(options: INetSuiteOperationOptions): Promise<INodeExecutionData> {
@@ -306,7 +303,7 @@ export class NetSuite implements INodeType {
 			requestData.query = query as Record<string, string | number | boolean>;
 		}
 		const response = await makeRequest(credentials, requestData);
-		return handleNetsuiteResponse(fns, response);
+		return handleNetsuiteResponse(fns, response, itemIndex);
 	}
 
 	static async updateRecord(options: INetSuiteOperationOptions): Promise<INodeExecutionData> {
@@ -324,7 +321,7 @@ export class NetSuite implements INodeType {
 			requestData.query = query as Record<string, string | number | boolean>;
 		}
 		const response = await makeRequest(credentials, requestData);
-		return handleNetsuiteResponse(fns, response);
+		return handleNetsuiteResponse(fns, response, itemIndex);
 	}
 
 	static async rawRequest(options: INetSuiteOperationOptions): Promise<INodeExecutionData> {
@@ -419,11 +416,11 @@ export class NetSuite implements INodeType {
 				} else if (operation === 'runSuiteQL') {
 					data = await NetSuite.runSuiteQL({ item, fns: this, credentials, itemIndex });
 				} else {
-					const error = `The operation "${operation}" is not supported!`;
-					if (this.continueOnFail() !== true) {
-						throw new Error(error);
+					const error = new Error(`The operation "${operation}" is not supported!`);
+					if (this.continueOnFail(error)) {
+						data = { json: { error: error.message }, pairedItem: { item: itemIndex } };
 					} else {
-						data = { json: { error } };
+						throw error;
 					}
 				}
 				return data;
