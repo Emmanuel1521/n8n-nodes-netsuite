@@ -5,3 +5,7 @@ tsconfig.tsbuildinfo
 archive/
 
 .claude/
+
+# Internal docs and tooling (not part of the npm package)
+PROJECT.md
+scripts/
