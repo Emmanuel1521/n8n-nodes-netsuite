@@ -1,5 +1,6 @@
 import { createHmac, randomBytes } from 'crypto';
 import { IDataObject } from 'n8n-workflow';
+import { INetSuiteCredentials, INetSuiteResponse } from './nodes/NetSuite/NetSuite.node.types';
 
 export class NetSuiteClient {
   private hostname: string;
@@ -10,13 +11,13 @@ export class NetSuiteClient {
   private tokenSecret: string;
   private apiBaseUrl: string;
 
-  constructor(credentials: IDataObject) {
-    this.hostname = credentials.hostname as string;
-    this.accountId = credentials.accountId as string;
-    this.consumerKey = credentials.consumerKey as string;
-    this.consumerSecret = credentials.consumerSecret as string;
-    this.tokenKey = credentials.tokenKey as string;
-    this.tokenSecret = credentials.tokenSecret as string;
+  constructor(credentials: INetSuiteCredentials) {
+    this.hostname = credentials.hostname;
+    this.accountId = credentials.accountId;
+    this.consumerKey = credentials.consumerKey;
+    this.consumerSecret = credentials.consumerSecret;
+    this.tokenKey = credentials.tokenKey;
+    this.tokenSecret = credentials.tokenSecret;
 
     if (!this.hostname || !this.accountId || !this.consumerKey || !this.consumerSecret || !this.tokenKey || !this.tokenSecret) {
       throw new Error('Missing required NetSuite credential data.');
@@ -25,7 +26,7 @@ export class NetSuiteClient {
     this.apiBaseUrl = `https://${this.hostname}`;
   }
 
-  async request(path: string, method = 'GET', body?: IDataObject | string, query?: IDataObject | string, headers?: Record<string, string>): Promise<any> {
+  async request(path: string, method = 'GET', body?: IDataObject | string, query?: IDataObject | string, headers?: Record<string, string>): Promise<INetSuiteResponse> {
     const normalizedPath = path.replace(/^\/+/, '');
     const url = new URL(`${this.apiBaseUrl}/${normalizedPath}`);
 

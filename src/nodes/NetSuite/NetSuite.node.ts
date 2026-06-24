@@ -15,6 +15,7 @@ import {
 	INetSuitePagedBody,
 	INetSuiteRequestOptions,
 	INetSuiteResponse,
+	INetSuiteResponseBody,
 	NetSuiteRequestType,
 } from './NetSuite.node.types';
 
@@ -28,22 +29,23 @@ import pLimit from '../../utils/pLimit';
 
 const debug = debuglog('n8n-nodes-netsuite');
 
-const handleNetsuiteResponse = (fns: IExecuteFunctions, response: INetSuiteResponse) => {
+const handleNetsuiteResponse = (fns: IExecuteFunctions, response: INetSuiteResponse): INodeExecutionData => {
 	debug(`Netsuite response:`, response.statusCode, response.body);
 	let body: JsonObject = {};
+	const bodyObj = (typeof response.body === 'string' ? { message: response.body } : response.body) as INetSuiteResponseBody;
 	const {
 		title: webTitle = undefined,
 		'o:errorCode': webCode,
 		'o:errorDetails': webDetails,
 		message: restletMessage = undefined,
-	} = response.body;
+	} = bodyObj;
 	if (!(response.statusCode && response.statusCode >= 200 && response.statusCode < 400)) {
 		let message = webTitle || restletMessage || webCode || response.statusText;
 		if (webDetails && webDetails.length > 0) {
 			message = webDetails[0].detail || message;
 		}
 		if (fns.continueOnFail() !== true) {
-			const error = new NodeApiError(fns.getNode(), response.body);
+			const error = new NodeApiError(fns.getNode(), bodyObj);
 			error.message = message;
 			throw error;
 		} else {
@@ -52,10 +54,10 @@ const handleNetsuiteResponse = (fns: IExecuteFunctions, response: INetSuiteRespo
 			};
 		}
 	} else {
-		body = response.body;
+		body = bodyObj;
 		const requestOptions = response.request.options as { method?: string } | null;
 		if (requestOptions?.method && ['POST', 'PATCH', 'DELETE'].includes(requestOptions.method)) {
-			body = typeof body === 'object' ? response.body : {};
+			body = bodyObj;
 			if (response.headers['x-netsuite-propertyvalidation']) {
 				body.propertyValidation = response.headers['x-netsuite-propertyvalidation'].split(',');
 			}
@@ -161,8 +163,8 @@ export class NetSuite implements INodeType {
 		nodeContext.offset = offset;
 		while ((returnAll || returnData.length < limit) && hasMore === true) {
 			const response = await makeRequest(credentials, requestData);
-			const body: JsonObject = handleNetsuiteResponse(fns, response);
-			const { hasMore: doContinue, items, links, offset, count, totalResults } = (body.json as INetSuitePagedBody);
+			const result = handleNetsuiteResponse(fns, response);
+			const { hasMore: doContinue, items, links, offset, count, totalResults } = result.json as INetSuitePagedBody;
 			if (doContinue) {
 				nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
 				requestData.nextUrl = nextUrl;
@@ -227,8 +229,8 @@ export class NetSuite implements INodeType {
 		debug('requestData', requestData);
 		while ((returnAll || returnData.length < limit) && hasMore === true) {
 			const response = await makeRequest(config, requestData);
-			const body: JsonObject = handleNetsuiteResponse(fns, response);
-			const { hasMore: doContinue, items, links, count, totalResults, offset } = (body.json as INetSuitePagedBody);
+			const result = handleNetsuiteResponse(fns, response);
+			const { hasMore: doContinue, items, links, count, totalResults, offset } = result.json as INetSuitePagedBody;
 			if (doContinue) {
 				nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
 				requestData.nextUrl = nextUrl;
@@ -273,7 +275,6 @@ export class NetSuite implements INodeType {
 			path: `services/rest/record/${apiVersion}/${recordType}/${internalId}${q ? `?${q}` : ''}`,
 		};
 		const response = await makeRequest(credentials, requestData);
-		if (item) (response.body as any).orderNo = item.json.orderNo;
 		return handleNetsuiteResponse(fns, response);
 	}
 
@@ -366,10 +367,11 @@ export class NetSuite implements INodeType {
 		const response = await makeRequest(credentials, requestData);
 
 		if (response.body) {
-			nodeContext.hasMore = (response.body as any).hasMore;
-			nodeContext.count = (response.body as any).count;
-			nodeContext.offset = (response.body as any).offset;
-			nodeContext.totalResults = (response.body as any).totalResults;
+			const pagedBody = response.body as unknown as INetSuitePagedBody;
+			nodeContext.hasMore = pagedBody.hasMore;
+			nodeContext.count = pagedBody.count;
+			nodeContext.offset = pagedBody.offset;
+			nodeContext.totalResults = pagedBody.totalResults;
 		}
 
 		if (nodeOptions.fullResponse) {
@@ -381,7 +383,8 @@ export class NetSuite implements INodeType {
 				},
 			};
 		} else {
-			return { json: response.body };
+			const rawBody = response.body;
+			return { json: typeof rawBody === 'string' ? { message: rawBody } : rawBody };
 		}
 	}
 

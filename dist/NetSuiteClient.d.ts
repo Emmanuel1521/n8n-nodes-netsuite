@@ -1,4 +1,5 @@
 import { IDataObject } from 'n8n-workflow';
+import { INetSuiteCredentials, INetSuiteResponse } from './nodes/NetSuite/NetSuite.node.types';
 export declare class NetSuiteClient {
     private hostname;
     private accountId;
@@ -7,8 +8,8 @@ export declare class NetSuiteClient {
     private tokenKey;
     private tokenSecret;
     private apiBaseUrl;
-    constructor(credentials: IDataObject);
-    request(path: string, method?: string, body?: IDataObject | string, query?: IDataObject | string, headers?: Record<string, string>): Promise<any>;
+    constructor(credentials: INetSuiteCredentials);
+    request(path: string, method?: string, body?: IDataObject | string, query?: IDataObject | string, headers?: Record<string, string>): Promise<INetSuiteResponse>;
     private buildAuthorizationHeader;
     private getSignature;
     private buildParameterString;

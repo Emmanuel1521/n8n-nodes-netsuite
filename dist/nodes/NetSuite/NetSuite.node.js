@@ -14,14 +14,15 @@ const debug = (0, util_1.debuglog)('n8n-nodes-netsuite');
 const handleNetsuiteResponse = (fns, response) => {
     debug(`Netsuite response:`, response.statusCode, response.body);
     let body = {};
-    const { title: webTitle = undefined, 'o:errorCode': webCode, 'o:errorDetails': webDetails, message: restletMessage = undefined, } = response.body;
+    const bodyObj = (typeof response.body === 'string' ? { message: response.body } : response.body);
+    const { title: webTitle = undefined, 'o:errorCode': webCode, 'o:errorDetails': webDetails, message: restletMessage = undefined, } = bodyObj;
     if (!(response.statusCode && response.statusCode >= 200 && response.statusCode < 400)) {
         let message = webTitle || restletMessage || webCode || response.statusText;
         if (webDetails && webDetails.length > 0) {
             message = webDetails[0].detail || message;
         }
         if (fns.continueOnFail() !== true) {
-            const error = new n8n_workflow_1.NodeApiError(fns.getNode(), response.body);
+            const error = new n8n_workflow_1.NodeApiError(fns.getNode(), bodyObj);
             error.message = message;
             throw error;
         }
@@ -32,10 +33,10 @@ const handleNetsuiteResponse = (fns, response) => {
         }
     }
     else {
-        body = response.body;
+        body = bodyObj;
         const requestOptions = response.request.options;
         if (requestOptions?.method && ['POST', 'PATCH', 'DELETE'].includes(requestOptions.method)) {
-            body = typeof body === 'object' ? response.body : {};
+            body = bodyObj;
             if (response.headers['x-netsuite-propertyvalidation']) {
                 body.propertyValidation = response.headers['x-netsuite-propertyvalidation'].split(',');
             }
@@ -134,8 +135,8 @@ class NetSuite {
         nodeContext.offset = offset;
         while ((returnAll || returnData.length < limit) && hasMore === true) {
             const response = await makeRequest(credentials, requestData);
-            const body = handleNetsuiteResponse(fns, response);
-            const { hasMore: doContinue, items, links, offset, count, totalResults } = body.json;
+            const result = handleNetsuiteResponse(fns, response);
+            const { hasMore: doContinue, items, links, offset, count, totalResults } = result.json;
             if (doContinue) {
                 nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
                 requestData.nextUrl = nextUrl;
@@ -198,8 +199,8 @@ class NetSuite {
         debug('requestData', requestData);
         while ((returnAll || returnData.length < limit) && hasMore === true) {
             const response = await makeRequest(config, requestData);
-            const body = handleNetsuiteResponse(fns, response);
-            const { hasMore: doContinue, items, links, count, totalResults, offset } = body.json;
+            const result = handleNetsuiteResponse(fns, response);
+            const { hasMore: doContinue, items, links, count, totalResults, offset } = result.json;
             if (doContinue) {
                 nextUrl = (links.find((link) => link.rel === 'next') || {}).href;
                 requestData.nextUrl = nextUrl;
@@ -243,8 +244,6 @@ class NetSuite {
             path: `services/rest/record/${apiVersion}/${recordType}/${internalId}${q ? `?${q}` : ''}`,
         };
         const response = await makeRequest(credentials, requestData);
-        if (item)
-            response.body.orderNo = item.json.orderNo;
         return handleNetsuiteResponse(fns, response);
     }
     static async removeRecord(options) {
@@ -330,10 +329,11 @@ class NetSuite {
         }
         const response = await makeRequest(credentials, requestData);
         if (response.body) {
-            nodeContext.hasMore = response.body.hasMore;
-            nodeContext.count = response.body.count;
-            nodeContext.offset = response.body.offset;
-            nodeContext.totalResults = response.body.totalResults;
+            const pagedBody = response.body;
+            nodeContext.hasMore = pagedBody.hasMore;
+            nodeContext.count = pagedBody.count;
+            nodeContext.offset = pagedBody.offset;
+            nodeContext.totalResults = pagedBody.totalResults;
         }
         if (nodeOptions.fullResponse) {
             return {
@@ -345,7 +345,8 @@ class NetSuite {
             };
         }
         else {
-            return { json: response.body };
+            const rawBody = response.body;
+            return { json: typeof rawBody === 'string' ? { message: rawBody } : rawBody };
         }
     }
     async execute() {

@@ -31,7 +31,7 @@ export type INetSuiteRequestOptions = {
 export type INetSuiteResponse = {
     statusCode: number;
     statusText: string;
-    body: INetSuiteResponseBody;
+    body: INetSuiteResponseBody | string;
     headers: Record<string, string>;
     request: JsonObject;
 };
