@@ -139,21 +139,22 @@ export class NetSuite implements INodeType {
 		const method = 'GET';
 		let nextUrl;
 		const requestType = NetSuiteRequestType.Record;
-		const params = new URLSearchParams();
 		const returnData: INodeExecutionData[] = [];
-		let prefix = query ? `?${query}` : '';
+		const queryParams: Record<string, string> = {};
+		if (query) {
+			new URLSearchParams(query).forEach((v, k) => { queryParams[k] = v; });
+		}
 		if (returnAll !== true) {
-			prefix = query ? `${prefix}&` : '?';
 			limit = fns.getNodeParameter('limit', itemIndex) as number || limit;
 			offset = fns.getNodeParameter('offset', itemIndex) as number || offset;
-			params.set('limit', String(limit));
-			params.set('offset', String(offset));
-			prefix += params.toString();
+			queryParams['limit'] = String(limit);
+			queryParams['offset'] = String(offset);
 		}
 		const requestData: INetSuiteRequestOptions = {
 			method,
 			requestType,
-			path: `services/rest/record/${apiVersion}/${recordType}${prefix}`,
+			path: `services/rest/record/${apiVersion}/${recordType}`,
+			query: queryParams,
 		};
 		nodeContext.hasMore = hasMore;
 		nodeContext.count = limit;
@@ -197,23 +198,22 @@ export class NetSuite implements INodeType {
 		const method = 'POST';
 		let nextUrl;
 		const requestType = NetSuiteRequestType.SuiteQL;
-		const params = new URLSearchParams();
 		const returnData: INodeExecutionData[] = [];
 		const config = { ...credentials, netsuiteQueryLimit: limit };
-		let prefix = '?';
+		const urlQueryParams: Record<string, string> = {};
 		if (returnAll !== true) {
 			limit = fns.getNodeParameter('limit', itemIndex) as number || limit;
 			offset = fns.getNodeParameter('offset', itemIndex) as number || offset;
-			params.set('offset', String(offset));
+			urlQueryParams['offset'] = String(offset);
 		}
-		params.set('limit', String(limit));
+		urlQueryParams['limit'] = String(limit);
 		config.netsuiteQueryLimit = limit;
-		prefix += params.toString();
 		const requestData: INetSuiteRequestOptions = {
 			method,
 			requestType,
-			query: query,
-			path: `services/rest/query/${apiVersion}/suiteql${prefix}`,
+			body: { q: query },
+			query: urlQueryParams,
+			path: `services/rest/query/${apiVersion}/suiteql`,
 			headers: {
 				'Content-Type': 'application/json',
 				'Prefer': 'transient',

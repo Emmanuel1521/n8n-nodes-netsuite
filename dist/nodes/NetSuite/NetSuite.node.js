@@ -110,21 +110,22 @@ class NetSuite {
         const method = 'GET';
         let nextUrl;
         const requestType = NetSuite_node_types_1.NetSuiteRequestType.Record;
-        const params = new URLSearchParams();
         const returnData = [];
-        let prefix = query ? `?${query}` : '';
+        const queryParams = {};
+        if (query) {
+            new URLSearchParams(query).forEach((v, k) => { queryParams[k] = v; });
+        }
         if (returnAll !== true) {
-            prefix = query ? `${prefix}&` : '?';
             limit = fns.getNodeParameter('limit', itemIndex) || limit;
             offset = fns.getNodeParameter('offset', itemIndex) || offset;
-            params.set('limit', String(limit));
-            params.set('offset', String(offset));
-            prefix += params.toString();
+            queryParams['limit'] = String(limit);
+            queryParams['offset'] = String(offset);
         }
         const requestData = {
             method,
             requestType,
-            path: `services/rest/record/${apiVersion}/${recordType}${prefix}`,
+            path: `services/rest/record/${apiVersion}/${recordType}`,
+            query: queryParams,
         };
         nodeContext.hasMore = hasMore;
         nodeContext.count = limit;
@@ -167,23 +168,22 @@ class NetSuite {
         const method = 'POST';
         let nextUrl;
         const requestType = NetSuite_node_types_1.NetSuiteRequestType.SuiteQL;
-        const params = new URLSearchParams();
         const returnData = [];
         const config = { ...credentials, netsuiteQueryLimit: limit };
-        let prefix = '?';
+        const urlQueryParams = {};
         if (returnAll !== true) {
             limit = fns.getNodeParameter('limit', itemIndex) || limit;
             offset = fns.getNodeParameter('offset', itemIndex) || offset;
-            params.set('offset', String(offset));
+            urlQueryParams['offset'] = String(offset);
         }
-        params.set('limit', String(limit));
+        urlQueryParams['limit'] = String(limit);
         config.netsuiteQueryLimit = limit;
-        prefix += params.toString();
         const requestData = {
             method,
             requestType,
-            query: query,
-            path: `services/rest/query/${apiVersion}/suiteql${prefix}`,
+            body: { q: query },
+            query: urlQueryParams,
+            path: `services/rest/query/${apiVersion}/suiteql`,
             headers: {
                 'Content-Type': 'application/json',
                 'Prefer': 'transient',

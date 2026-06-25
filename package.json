@@ -1,6 +1,6 @@
 {
   "name": "@emmanuel1521/n8n-nodes-netsuite",
-  "version": "0.7.27",
+  "version": "0.7.28",
   "description": "n8n node for NetSuite REST API integration.",
   "license": "MIT",
   "main": "dist/index.js",
