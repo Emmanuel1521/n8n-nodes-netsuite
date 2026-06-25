@@ -331,36 +331,34 @@ export class NetSuite implements INodeType {
 		const method = fns.getNodeParameter('method', itemIndex) as string;
 		const body = fns.getNodeParameter('body', itemIndex) as string;
 		const requestType = fns.getNodeParameter('requestType', itemIndex) as NetSuiteRequestType;
-		const query = body || (item ? item.json : undefined);
+		const bodyContent = body || (item ? item.json : undefined);
 		const nodeOptions = fns.getNodeParameter('options', 0) as IDataObject;
+		let urlQueryParams: Record<string, string> = {};
 
 		if (path && (path.startsWith('https://') || path.startsWith('http://'))) {
 			const url = new URL(path);
-			path = `${url.pathname.replace(/^\//, '')}${url.search || ''}`;
+			path = url.pathname.replace(/^\//, '');
+			if (url.search) {
+				urlQueryParams = Object.fromEntries(new URLSearchParams(url.search));
+			}
 		}
 
 		const requestData: INetSuiteRequestOptions = {
 			method,
 			requestType,
 			path,
+			query: Object.keys(urlQueryParams).length > 0 ? urlQueryParams : undefined,
 		};
 
-		if (query && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+		if (bodyContent && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
 			try {
-				const parsedQuery = typeof query === 'string' ? JSON.parse(query) : query;
-				if (typeof parsedQuery === 'string') {
-					requestData.query = parsedQuery;
-				} else {
-					requestData.query = parsedQuery as Record<string, string | number | boolean>;
-				}
+				const parsed = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
+				requestData.body = parsed;
 			} catch {
-				requestData.query = query as string | Record<string, string | number | boolean> | undefined;
+				requestData.body = bodyContent as string;
 			}
 		}
 
-		if ((requestData.query as Record<string, unknown>)?.query) {
-			requestData.query = ((requestData.query as Record<string, unknown>).query) as Record<string, string | number | boolean>;
-		}
 		const response = await makeRequest(credentials, requestData);
 
 		if (response.body) {
