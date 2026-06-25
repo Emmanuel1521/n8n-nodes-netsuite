@@ -9,3 +9,4 @@ archive/
 # Internal docs and tooling (not part of the npm package)
 PROJECT.md
 scripts/
+NETSUITE_OAUTH_FIX.md
