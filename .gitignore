@@ -1,12 +1,33 @@
+# =============================================================================
+# Repository policy: allowlist mode
+#
+# This repo IS the npm package @emmanuel1521/n8n-nodes-netsuite.
+# Only files required to build, publish, and document the package are tracked.
+# Everything else at the repo root is ignored by default.
+#
+# To track a new file: add an explicit `!/path` entry to the allowlist below.
+# =============================================================================
+
+# --- Ignore everything at the root by default ---
+/*
+
+# --- Allowlist: files that ARE part of the npm package build ---
+!/.gitattributes
+!/.gitignore
+!/.github
+!/CHANGELOG.md
+!/LICENSE
+!/README.md
+!/RELEASE_NOTES.md
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/src
+!/dist
+
+# --- Noise inside allowlisted directories (belt-and-suspenders) ---
 node_modules/
 tsconfig.tsbuildinfo
 .DS_Store
-
-archive/
-
-.claude/
-
-# Internal docs and tooling (not part of the npm package)
-PROJECT.md
-scripts/
-NETSUITE_OAUTH_FIX.md
+Thumbs.db
+*.log
