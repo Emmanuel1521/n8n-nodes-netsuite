@@ -295,33 +295,30 @@ class NetSuite {
         const method = fns.getNodeParameter('method', itemIndex);
         const body = fns.getNodeParameter('body', itemIndex);
         const requestType = fns.getNodeParameter('requestType', itemIndex);
-        const query = body || (item ? item.json : undefined);
+        const bodyContent = body || (item ? item.json : undefined);
         const nodeOptions = fns.getNodeParameter('options', 0);
+        let urlQueryParams = {};
         if (path && (path.startsWith('https://') || path.startsWith('http://'))) {
             const url = new URL(path);
-            path = `${url.pathname.replace(/^\//, '')}${url.search || ''}`;
+            path = url.pathname.replace(/^\//, '');
+            if (url.search) {
+                urlQueryParams = Object.fromEntries(new URLSearchParams(url.search));
+            }
         }
         const requestData = {
             method,
             requestType,
             path,
+            query: Object.keys(urlQueryParams).length > 0 ? urlQueryParams : undefined,
         };
-        if (query && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+        if (bodyContent && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
             try {
-                const parsedQuery = typeof query === 'string' ? JSON.parse(query) : query;
-                if (typeof parsedQuery === 'string') {
-                    requestData.query = parsedQuery;
-                }
-                else {
-                    requestData.query = parsedQuery;
-                }
+                const parsed = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
+                requestData.body = parsed;
             }
             catch {
-                requestData.query = query;
+                requestData.body = bodyContent;
             }
-        }
-        if (requestData.query?.query) {
-            requestData.query = (requestData.query.query);
         }
         const response = await makeRequest(credentials, requestData);
         if (response.body) {

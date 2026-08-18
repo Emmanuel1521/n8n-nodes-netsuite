@@ -1,6 +1,6 @@
 {
   "name": "@emmanuel1521/n8n-nodes-netsuite",
-  "version": "0.7.28",
+  "version": "0.7.29",
   "description": "n8n node for NetSuite REST API integration.",
   "license": "MIT",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && node -e \"require('fs').cpSync('src/nodes/NetSuite/netSuite.svg','dist/nodes/NetSuite/netSuite.svg')\"",
     "dev": "tsc --build --watch",
     "lint": "eslint --ext .ts src",
     "prepare": "npm run build"
